@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'home_page.dart'; // 匯入封裝後的 HomePage
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'home_page.dart';
 
-void main() {
+Future<void> main() async {
+  await dotenv.load(); // 或 '.env'，根據你的檔案位置調整
   runApp(const MainApp());
 }
 
@@ -10,8 +12,6 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: const HomePage(), // 使用封裝後的 HomePage
-    );
+    return MaterialApp(home: const HomePage());
   }
 }
