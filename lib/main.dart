@@ -3,7 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'home_page.dart';
 
 Future<void> main() async {
-  await dotenv.load(); // 或 '.env'，根據你的檔案位置調整
+  await dotenv.load();
+  print('API Key: ${dotenv.env['OPENWEATHER_API_KEY']}'); // 測試 API 金鑰
   runApp(const MainApp());
 }
 

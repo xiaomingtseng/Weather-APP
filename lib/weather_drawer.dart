@@ -4,10 +4,10 @@ class WeatherDrawer extends StatefulWidget {
   const WeatherDrawer({super.key});
 
   @override
-  _WeatherDrawerState createState() => _WeatherDrawerState();
+  WeatherDrawerState createState() => WeatherDrawerState();
 }
 
-class _WeatherDrawerState extends State<WeatherDrawer> {
+class WeatherDrawerState extends State<WeatherDrawer> {
   final TextEditingController _searchController = TextEditingController();
   final List<String> _locations = ['台北']; // 初始地區
   final List<String> _searchResults = [];
