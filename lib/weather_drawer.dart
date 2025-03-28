@@ -1,71 +1,57 @@
 import 'package:flutter/material.dart';
 
-class WeatherDrawer extends StatefulWidget {
-  const WeatherDrawer({super.key});
+class WeatherDrawer extends StatelessWidget {
+  final Function(String) onSearch;
 
-  @override
-  WeatherDrawerState createState() => WeatherDrawerState();
-}
-
-class WeatherDrawerState extends State<WeatherDrawer> {
-  final TextEditingController _searchController = TextEditingController();
-  final List<String> _locations = ['台北']; // 初始地區
-  final List<String> _searchResults = [];
-
-  void _searchLocation(String query) {
-    if (query.isNotEmpty) {
-      setState(() {
-        _searchResults.add(query);
-        _searchController.clear();
-      });
-    }
-  }
+  const WeatherDrawer({Key? key, required this.onSearch}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    String searchInput = '';
+
     return Drawer(
-      child: Column(
+      child: ListView(
+        padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
             decoration: BoxDecoration(color: Theme.of(context).primaryColor),
-            child: const Center(
-              child: Text(
-                '搜尋地區',
-                style: TextStyle(color: Colors.white, fontSize: 20),
-              ),
+            child: const Text(
+              '天氣選單',
+              style: TextStyle(color: Colors.white, fontSize: 24),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: '輸入地區名稱',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () => _searchLocation(_searchController.text),
-                ),
-                border: const OutlineInputBorder(),
-              ),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: _locations.length + _searchResults.length,
-              itemBuilder: (context, index) {
-                final location =
-                    index < _locations.length
-                        ? _locations[index]
-                        : _searchResults[index - _locations.length];
-                return ListTile(
-                  title: Text(location),
-                  onTap: () {
-                    // 點擊後可切換到該地區的天氣資訊
-                    Navigator.pop(context); // 關閉 Drawer
-                  },
-                );
-              },
-            ),
+          ListTile(
+            leading: const Icon(Icons.search),
+            title: const Text('搜尋城市'),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: const Text('搜尋城市'),
+                    content: TextField(
+                      onChanged: (value) => searchInput = value,
+                      decoration: const InputDecoration(hintText: '輸入城市名稱'),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('取消'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          if (searchInput.isNotEmpty) {
+                            onSearch(searchInput); // 呼叫搜尋功能
+                          }
+                        },
+                        child: const Text('搜尋'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
           ),
         ],
       ),

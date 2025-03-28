@@ -1,24 +1,133 @@
 import 'package:flutter/material.dart';
+import 'weather_data_source.dart';
+import 'weather_model.dart';
 import 'weather_drawer.dart';
-import 'weather_service.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<WeatherData> displayedWeatherData = [weatherDataList.first]; // 初始只有台北
+  WeatherData? searchResult; // 搜尋結果
+
+  void _searchCity(String query) {
+    final result = weatherDataList.firstWhere(
+      (weather) => weather.city.contains(query),
+      orElse:
+          () => WeatherData(
+            city: '未知',
+            temperature: 'N/A',
+            highLow: 'N/A',
+            description: '找不到該城市',
+            icon: Icons.error,
+            hourlyForecast: [],
+            dailyForecast: [],
+          ),
+      // 如果找不到，返回一個預設的 WeatherData 物件
+    );
+
+    setState(() {
+      searchResult = result;
+    });
+
+    if (result != null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder:
+              (context) => SearchResultPage(
+                weather: result,
+                isAdded: displayedWeatherData.contains(result),
+                onAdd: () {
+                  setState(() {
+                    if (!displayedWeatherData.contains(result)) {
+                      displayedWeatherData.add(result);
+                    }
+                  });
+                  Navigator.of(context).pop(); // 返回主畫面
+                },
+              ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('找不到該城市')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: displayedWeatherData.length,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('天氣查詢'),
-          bottom: const TabBar(tabs: [Tab(text: '台北'), Tab(text: '東京')]),
+          bottom: TabBar(
+            isScrollable: true,
+            tabs:
+                displayedWeatherData.map((weather) {
+                  return Tab(text: weather.city);
+                }).toList(),
+          ),
         ),
-        drawer: const WeatherDrawer(), // 加入 Drawer
-        body: const TabBarView(
+        drawer: WeatherDrawer(onSearch: _searchCity),
+        body: TabBarView(
+          children:
+              displayedWeatherData.map((weather) {
+                return WeatherDetailView(weather: weather);
+              }).toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class SearchResultPage extends StatelessWidget {
+  final WeatherData weather;
+  final bool isAdded;
+  final VoidCallback onAdd;
+
+  const SearchResultPage({
+    Key? key,
+    required this.weather,
+    required this.isAdded,
+    required this.onAdd,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('搜尋結果'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(), // 返回主畫面
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CurrentWeatherView(city: '台北'), // 台北天氣
-            CurrentWeatherView(city: '東京'), // 東京天氣
+            Text(
+              weather.city,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 8.0),
+            Text(
+              '${weather.temperature} (${weather.highLow})',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8.0),
+            Text(
+              weather.description,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 16.0),
+            if (!isAdded)
+              ElevatedButton(onPressed: onAdd, child: const Text('新增至主畫面')),
           ],
         ),
       ),
@@ -26,218 +135,104 @@ class HomePage extends StatelessWidget {
   }
 }
 
-class CurrentWeatherView extends StatefulWidget {
-  final String city;
+class WeatherDetailView extends StatelessWidget {
+  final WeatherData weather;
 
-  const CurrentWeatherView({super.key, required this.city});
-
-  @override
-  CurrentWeatherViewState createState() => CurrentWeatherViewState();
-}
-
-class CurrentWeatherViewState extends State<CurrentWeatherView> {
-  // 靜態假資料
-  final Map<String, dynamic> currentWeather = {
-    'temperature': '25.0°C',
-    'highLow': '高: 28°C / 低: 22°C',
-    'location': '台北',
-  };
-
-  final List<Map<String, dynamic>> hourlyForecast = List.generate(
-    12,
-    (index) => {
-      'hour': '${6 + index}:00',
-      'temp': '${22 + index % 5}°C',
-      'icon': Icons.wb_sunny,
-    },
-  );
-
-  final List<Map<String, dynamic>> tenDayForecast = [
-    {'day': '星期一', 'high': '28°C', 'low': '22°C', 'weather': '晴天'},
-    {'day': '星期二', 'high': '27°C', 'low': '21°C', 'weather': '多雲'},
-    {'day': '星期三', 'high': '26°C', 'low': '20°C', 'weather': '小雨'},
-    {'day': '星期四', 'high': '29°C', 'low': '23°C', 'weather': '晴天'},
-    {'day': '星期五', 'high': '25°C', 'low': '22°C', 'weather': '雷陣雨'},
-    {'day': '星期六', 'high': '30°C', 'low': '24°C', 'weather': '晴天'},
-    {'day': '星期日', 'high': '31°C', 'low': '25°C', 'weather': '晴天'},
-  ];
+  const WeatherDetailView({Key? key, required this.weather}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('天氣資訊 - ${widget.city}')),
-      body: Column(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 當前天氣資訊
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  currentWeather['temperature'],
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 4.0),
-                Text(
-                  currentWeather['highLow'],
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4.0),
-                Text(
-                  currentWeather['location'],
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+          Text(weather.city, style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 8.0),
+          Text(
+            '${weather.temperature} (${weather.highLow})',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8.0),
+          Text(
+            weather.description,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 16.0),
+          Text('每小時預報', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8.0),
+          SizedBox(
+            height: 100.0,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: weather.hourlyForecast.length,
+              itemBuilder: (context, index) {
+                final forecast = weather.hourlyForecast[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(forecast.icon),
+                        const SizedBox(height: 4.0),
+                        Text(forecast.time),
+                        const SizedBox(height: 4.0),
+                        Text(forecast.temperature),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 12 小時預報
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      '12 小時天氣預報',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  SizedBox(
-                    height: 150.0,
-                    child: GridView.builder(
-                      scrollDirection: Axis.horizontal,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 1,
-                            childAspectRatio: 1.5,
-                            mainAxisSpacing: 8.0,
-                          ),
-                      itemCount: hourlyForecast.length,
-                      itemBuilder: (context, index) {
-                        final forecast = hourlyForecast[index];
-                        return Card(
-                          elevation: 4.0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  forecast['hour'],
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                                const SizedBox(height: 8.0),
-                                Icon(
-                                  forecast['icon'],
-                                  size: 40.0,
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                                const SizedBox(height: 8.0),
-                                Text(
-                                  forecast['temp'],
-                                  style: Theme.of(context).textTheme.bodyLarge,
-                                ),
-                              ],
+          const SizedBox(height: 16.0),
+          Text('每日預報', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8.0),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: weather.dailyForecast.length,
+            itemBuilder: (context, index) {
+              final forecast = weather.dailyForecast[index];
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                elevation: 4.0,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Icon(forecast.icon, size: 40.0),
+                      const SizedBox(width: 16.0),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              forecast.date,
+                              style: Theme.of(context).textTheme.titleMedium,
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  // 10 天預報
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      '10 天天氣預報',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: tenDayForecast.length,
-                    itemBuilder: (context, index) {
-                      final forecast = tenDayForecast[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 8.0,
-                          vertical: 4.0,
+                            const SizedBox(height: 4.0),
+                            Text(
+                              forecast.highLow,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 4.0),
+                            Text(
+                              forecast.description,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
                         ),
-                        elevation: 4.0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                        ),
-                        child: ListTile(
-                          leading: Icon(
-                            Icons.wb_sunny, // 可根據天氣狀況動態更改圖示
-                            color: Theme.of(context).primaryColor,
-                          ),
-                          title: Text('${forecast['day']}'),
-                          subtitle: Text('${forecast['weather']}'),
-                          trailing: Text(
-                            '高: ${forecast['high']} / 低: ${forecast['low']}',
-                          ),
-                        ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ],
-      ),
-    );
-  }
-}
-
-class TenDayForecastView extends StatelessWidget {
-  final String city;
-  final List<Map<String, dynamic>> tenDayForecast;
-
-  const TenDayForecastView({
-    super.key,
-    required this.city,
-    required this.tenDayForecast,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('10 天預報 - $city')),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ListView.builder(
-          itemCount: tenDayForecast.length,
-          itemBuilder: (context, index) {
-            final forecast = tenDayForecast[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 8.0,
-                vertical: 4.0,
-              ),
-              elevation: 4.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.0),
-              ),
-              child: ListTile(
-                leading: Icon(
-                  Icons.wb_sunny, // 可根據天氣狀況動態更改圖示
-                  color: Theme.of(context).primaryColor,
-                ),
-                title: Text('${forecast['day']}'),
-                subtitle: Text('${forecast['weather']}'),
-                trailing: Text('${forecast['temp']}'),
-              ),
-            );
-          },
-        ),
       ),
     );
   }
