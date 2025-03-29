@@ -162,14 +162,22 @@ class WeatherDetailView extends StatelessWidget {
           Text('每小時預報', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8.0),
           SizedBox(
-            height: 100.0,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
+            height: 150.0, // 設定固定高度，根據需求調整
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const BouncingScrollPhysics(),
+              scrollDirection: Axis.horizontal, // 設定為水平滾動
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 1, // 限制為一列
+                crossAxisSpacing: 8.0,
+                mainAxisSpacing: 8.0,
+                childAspectRatio: 1.5, // 控制每個格子的寬高比
+              ),
               itemCount: weather.hourlyForecast.length,
               itemBuilder: (context, index) {
                 final forecast = weather.hourlyForecast[index];
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 8.0),
+                  margin: const EdgeInsets.all(4.0),
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Column(
